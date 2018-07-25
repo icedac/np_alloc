@@ -12,4 +12,11 @@
 ## feature
 - per-size, per-thread memory pool wihtout lock
 
+## api
+
+```
+void*    np_alloc(size_t bytes);
+void*    np_alloc(size_t bytes, const char file[], int line);
+void     np_free(void * ptr);
+```
 
