@@ -10,7 +10,7 @@
 
 
 ## feature
-- per-size, per-thread memory pool wihtout lock
+- lock-free, per-size, per-thread memory pool
 
 ## api
 
