@@ -34,7 +34,7 @@ namespace np {
 
         template < typename T, typename... Targs >
         inline T* t_aligned_new(size_t aligned_size, const Targs&... args) {
-            T* t = reinterpret_cast<T*>(_aligned_malloc(sizeof(T), aligned_size));
+            T* t = reinterpret_cast<T*>(np::aligned_alloc( aligned_size, sizeof(T) ));
             new (t) T(args...);
             return t;
         }
@@ -42,10 +42,9 @@ namespace np {
         template < typename T >
         inline void t_aligned_delete(T* t) {
             t->~T();
-            free(t);
+            np::aligned_free(t);
         }
     }
-
 }
 
 #endif// _____NP_ALLOC__LOCAL_NEW_H_

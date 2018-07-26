@@ -36,6 +36,7 @@ namespace np {
         mmap() : chunk_size_(kDefaultChunkSize) {
             init();
         }
+        ~mmap();
 
         void init();
 
@@ -58,30 +59,7 @@ namespace np {
             return alloc_chunk_from_new();
         }
 
-        inline void* alloc_chunk_from_new() {
-            void* head = head_.load(std::memory_order_relaxed);
-            void* next_ptr = nullptr;
-
-            do {
-                if (!head) return nullptr;
-                auto index = get_chunk_index(head);
-                assert(index != -1);
-                next_ptr = get_chunk_ptr(index + 1);
-
-            } while (!head_.compare_exchange_weak(head, next_ptr, std::memory_order_release));
-
-            head = VirtualAlloc(head, chunk_size_, MEM_COMMIT, PAGE_READWRITE);
-            if (!head) {
-                assert(head);
-            }
-
-            auto index = get_chunk_index(head);
-            // alloc_chunk_index_.set(index); // allocated
-            perf_alloc.fetch_add(1);
-            // printf("mmap::allocate ptr[%I64x] index[%I64d] size[%I64d]\n", (uint64)head, index, get_chunk_size());
-
-            return head;
-        }
+        void* alloc_chunk_from_new();
 
         inline void free_chunk(void* ptr) {
             chunk_header* new_head = reinterpret_cast<chunk_header*>(ptr);

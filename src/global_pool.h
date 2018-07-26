@@ -13,14 +13,15 @@
 #include "np_common.h"
 #include "np_mmap.h"
 
-
 namespace np {
 
     class global_pool {
     public:
-        global_pool() {
+        inline global_pool() {
             mm_.reserve();
         }
+
+        ~global_pool();
 
         inline uint64 get_chunk_size() const { return mm_.get_chunk_size(); }
 
@@ -28,10 +29,11 @@ namespace np {
 
         inline void free_chunk(void* ptr) { mm_.free_chunk(ptr); }
 
+        inline string debug_as_string() /*const*/ { return mm_.debug_as_string(); }
+
     private:
-        mmap    mm_;
+        np::mmap    mm_;
     };
 }
 
 #endif// _____NP_ALLOC__GLOBAL_POOL_H_
-

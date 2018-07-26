@@ -31,8 +31,14 @@
 		#define __COMPILER_NAME			"ver < MSVC++ 14.0 (VS2015)"
 	#endif
 
+#elif defined(__GNUC__)
+
+	#define COMPILER_GCC
+    #define __COMPILER_NAME			    "g++"
+
 #else
-	#define __COMPILER_NAME			"unknown compiler"
+    #error "Could not determine compiler"
+    #define __COMPILER_NAME				"Could not determine compiler"
 
 #endif
 

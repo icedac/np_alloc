@@ -8,12 +8,15 @@
  ***/
 #include "stdafx.h"
 
+#include <thread>
+#include <mutex>
+
+#include "np_common.h"
 #include "np_alloc.h"
-#include "global_pool.h"
-#include "local_new.h"
 #include "np_thread.h"
 #include "global_pool.h"
-#include <vector>
+
+#include "local_new.h"
 
 // assert if freeing corrupted memory or wrong memory
 #define NP_DEBUG_MEMORY_FENCE
@@ -38,16 +41,34 @@ namespace np {
     constexpr size_t    kL1CacheAlignSize = 64;
     constexpr size_t    kMaxBlockSize = 8192 + kL1CacheAlignSize - kDefaultAlignSize;
 
+    static std::mutex   g_mtx_cout; // implemented in critical section
+
+
+    global_pool::~global_pool() {
+        std::cout << "[" << std::hex << std::this_thread::get_id() << "] fuck me\n";
+    }
+
     // void * _aligned_malloc(size_t size, size_t alignment);
     namespace internal {
+
+        static void del_glolbal_pool();
+
         static np::global_pool* get_global_pool() {
             static np::global_pool* pool = nullptr;
             static bool _init = [&]() {
                 pool = new np::global_pool();
+
+                std::atexit(del_glolbal_pool);
+
                 return true;
             }();
             auto init = (_init == true);
             return pool;
+        }
+
+        static void del_glolbal_pool() {
+            auto* p = get_global_pool();
+            delete p;
         }
     }
 
@@ -65,23 +86,37 @@ namespace np {
             chunk_size_ = internal::get_global_pool()->get_chunk_size();
         }
 
+        ~tls_ps_pool() {
+            // free 
+            deinit();
+        }
+
         size_t get_alloc_size() const {
             return alloc_size_;
         }
 
         void* alloc(size_t bytes, const char file[], int line) {
+            void* ptr = nullptr;
             // if has free_list, then return from it
             if (free_) {
-                auto* ptr = free_;
+                ptr = free_;
                 free_ = free_->next;
-                return ptr;
+            }
+            else {
+                // or alloc from local pool
+                ptr = alloc_from_local_pool(bytes);
             }
 
-            // or alloc from local pool
-            return alloc_from_local_pool(bytes);
+            // null
+            if (!ptr) return ptr;
+
+            ++allocated_;
+            return ptr;
         }
 
         void dealloc(void * ptr) {
+            --allocated_;
+
             // add to free list
             assert(get_alloc_size() >= sizeof(free_header));
             free_header* fh = (free_header*)ptr;
@@ -126,24 +161,54 @@ namespace np {
             head_ = new_pool;
         }
 
+        void deinit() {
+            auto c = 0;
+            free_header* f = free_;
+            while (f) {
+                ++c;
+                f = f->next;
+            }
+
+            if ( 0 != allocated_) {
+                std::lock_guard<std::mutex> lg(g_mtx_cout);
+                std::cerr << "tls_ps_pool["<< alloc_size_ << "]::thread [" << std::hex << std::this_thread::get_id() << "] has allocated and not freed: " << allocated_ << " units. free_count: " << c << " units\n";
+            }
+
+            while (head_) {
+                pool* p = head_;
+                head_ = head_->next;
+                internal::get_global_pool()->free_chunk(p);
+            }
+        }
+
     private:
         pool*           head_ = nullptr;
         free_header*    free_ = nullptr;
 
         const size_t    alloc_size_;
         size_t          chunk_size_;
+
+        uint64          allocated_;
     };
 
     // alloc header
     struct alloc_header_t
     {
         std::uint32_t   size;
-        std::uint32_t   line;
+        std::uint16_t   line;
+        std::uint16_t   thread_id;
         const char*	    file;
     };
     constexpr size_t calc_aligned_size(size_t actual_size, size_t aligned_size) {
         return ((actual_size / aligned_size) + (actual_size%aligned_size) == 0 ? 0 : 1) * aligned_size;
     }
+
+    static const uint64 kMemoryFencePadding[] = {
+        0xbeefbabe19771218,
+        0x5ca1ab1e20180721,
+        0xbeefbabe19771218,
+        0x5ca1ab1e20180721,
+    };
 
     class thread_local_pool {
     public:
@@ -164,8 +229,8 @@ namespace np {
         }
 
         void* alloc(size_t bytes, const char file[], int line) {
+            constexpr auto header_size = calc_aligned_size(sizeof(alloc_header_t), kDefaultAlignSize);
             auto alloc_size = bytes;
-            auto header_size = calc_aligned_size(sizeof(alloc_header_t), kDefaultAlignSize);
             alloc_size += header_size;
 #ifdef NP_DEBUG_MEMORY_FENCE
             alloc_size += (16 * 2);
@@ -182,24 +247,25 @@ namespace np {
 
             alloc_header_t* h = reinterpret_cast<alloc_header_t*>(p);
             h->size = (std::uint32_t)bytes;
+            h->line = (std::uint16_t)line;
             h->file = file;
-            h->line = line;
+            h->thread_id = (uint16_t) *((uint32*)(&std::this_thread::get_id())); // std::thread::id implemented as uint32
 
             p = reinterpret_cast<void*>(((byte*)p) + header_size);
 #ifdef NP_DEBUG_MEMORY_FENCE
             uint64_t* pre_pad = (uint64_t*)p;
             uint64_t* post_pad = (uint64_t*)(((byte*)p) + 16 + h->size);
-            pre_pad[0] = 0xbeefbabe19771218;
-            pre_pad[1] = 0x5ca1ab1e20180721;
-            post_pad[0] = 0xbeefbabe19771218;
-            post_pad[1] = 0x5ca1ab1e20180721;
+            pre_pad[0] = kMemoryFencePadding[0];
+            pre_pad[1] = kMemoryFencePadding[1];
+            post_pad[0] = kMemoryFencePadding[2];
+            post_pad[1] = kMemoryFencePadding[3];
             p = reinterpret_cast<void*>(((byte*)p) + 16);
 #endif
             return p;
         }
 
         void dealloc(void * ptr) {
-            auto header_size = calc_aligned_size(sizeof(alloc_header_t), kDefaultAlignSize);
+            constexpr auto header_size = calc_aligned_size(sizeof(alloc_header_t), kDefaultAlignSize);
             alloc_header_t* h = reinterpret_cast<alloc_header_t*>( ((byte*)ptr) - header_size );
 #ifdef NP_DEBUG_MEMORY_FENCE
             h = reinterpret_cast<alloc_header_t*>(((byte*)ptr) - header_size - 16 );
@@ -213,10 +279,10 @@ namespace np {
             uint64_t* pre_pad = (uint64_t*)(((byte*)h) + header_size);
             uint64_t* post_pad = (uint64_t*)(((byte*)h) + header_size + 16 + h->size);
             
-            assert(pre_pad[0] == 0xbeefbabe19771218);
-            assert(pre_pad[1] == 0x5ca1ab1e20180721);
-            assert(post_pad[0] == 0xbeefbabe19771218);
-            assert(post_pad[1] == 0x5ca1ab1e20180721);
+            assert(pre_pad[0] == kMemoryFencePadding[0]);
+            assert(pre_pad[1] == kMemoryFencePadding[1]);
+            assert(post_pad[0] == kMemoryFencePadding[2]);
+            assert(post_pad[1] == kMemoryFencePadding[3]);
 #endif
 
             if (alloc_size <= max_alloc_size_)
@@ -225,6 +291,15 @@ namespace np {
             {
                 free(h);                
             }
+        }
+
+        const alloc_header_t* get_alloc_header(void* ptr) const {
+            constexpr auto header_size = calc_aligned_size(sizeof(alloc_header_t), kDefaultAlignSize);
+            alloc_header_t* h = reinterpret_cast<alloc_header_t*>(((byte*)ptr) - header_size);
+#ifdef NP_DEBUG_MEMORY_FENCE
+            h = reinterpret_cast<alloc_header_t*>(((byte*)ptr) - header_size - 16);
+#endif
+            return h;
         }
 
         void init() {
@@ -241,7 +316,7 @@ namespace np {
 
             // initialize table to tls_pool per alloc size
             // only sizeof(void*)*81xx bytes
-            mapping_pool_ = (tls_pool**)_aligned_malloc(sizeof(tls_pool*) * (max_alloc_size_ + 1), kL1CacheAlignSize);
+            mapping_pool_ = (tls_pool**)np::aligned_alloc(kL1CacheAlignSize, sizeof(tls_pool*) * (max_alloc_size_ + 1) );
             size_t cur_size = 0;
             for (auto& pool : tls_pool_ ) {
                 auto alloc_size = pool.get_alloc_size();
@@ -253,7 +328,7 @@ namespace np {
         }
 
         ~thread_local_pool() {
-            _aligned_free(mapping_pool_);
+            np::aligned_free(mapping_pool_);
         }
 
         static vector<size_t> get_alloc_size_list() {
@@ -272,7 +347,7 @@ namespace np {
                 }
             }
         done:
-            assert(sizes.size() <= 32, "per-size allocator should be lower than 32");
+            assert(sizes.size() <= 32); // "per-size allocator should be lower than 32");
             return sizes;
         }
     private:
@@ -306,4 +381,10 @@ NP_API void* np_alloc(size_t bytes, const char file[], int line)
 NP_API void np_free(void * ptr)
 {
     np::thread_local_pool::get().dealloc(ptr);
+}
+
+NP_API void np_debug_print()
+{
+    auto dbg_string = np::internal::get_global_pool()->debug_as_string();
+    std::cout << dbg_string;
 }

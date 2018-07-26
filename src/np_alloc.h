@@ -18,5 +18,7 @@ NP_API void*    np_alloc(size_t bytes);
 NP_API void*    np_alloc(size_t bytes, const char file[], int line);
 NP_API void     np_free(void * ptr);
 
+NP_API void     np_debug_print();
+
 #endif// _____NP_ALLOC__NP_ALLOC_H_
 

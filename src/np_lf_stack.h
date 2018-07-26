@@ -4,6 +4,9 @@
  *  np_lf_stack.h
  *      ($\np_alloc\src)
  *
+ *
+ *  simple lock-free stack (ABA free)
+ *
  *  by icedac 
  *
  ***/

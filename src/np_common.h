@@ -10,11 +10,16 @@
 #ifndef _____NP_ALLOC__NP_COMMON_H_
 #define _____NP_ALLOC__NP_COMMON_H_
 
+#include <assert.h>
+#include <stdint.h>
+#include <stdlib.h>
+
 #include <vector>
 #include <array>
-#include <stdint.h>
 #include <string.h>
 #include <sstream>
+#include <atomic>
+#include <functional>
 
 #ifdef _MSC_VER
 #include <intrin.h>
@@ -32,6 +37,8 @@ namespace np {
     typedef std::ostringstream ostringstream;
     typedef std::stringstream stringstream;
 
+    typedef unsigned long long int ull_int;
+
     template < typename T >
     using vector = std::vector<T>;
     template < typename T, size_t SZ >
@@ -41,10 +48,10 @@ namespace np {
     /****************************************************************************
     * number litteral
     */
-    constexpr uint64 operator "" _MB(uint64 n) {
+    constexpr ull_int operator "" _MB(ull_int n) {
         return (n * 1024LL * 1024LL);
     }
-    constexpr uint64 operator "" _GB(uint64 n) {
+    constexpr ull_int operator "" _GB(ull_int n) {
         return (n * 1024LL * 1024LL * 1024LL);
     }
 
@@ -58,6 +65,14 @@ namespace np {
     inline uint64 ctz(uint64 x) { if (x) return __builtin_ctzll(x); return sizeof(x) * 8; }
     inline uint32 popcnt(uint32 x) { return __builtin_popcount(x); }
     inline uint32 popcnt(uint64 x) { return __builtin_popcountll(x); }
+
+    inline void* aligned_alloc(size_t alignment, size_t size) {
+        return std::aligned_alloc(alignment, size);
+    }
+    inline void aligned_free(void* ptr) {
+        free(ptr);
+    }
+
 #elif defined(_MSC_VER)
     inline uint32 clz(uint32 x) { // count leading zero
         DWORD lz = 0; 
@@ -84,6 +99,13 @@ namespace np {
     }
     inline uint64 popcnt(uint64 x) {
         return __popcnt64(x);
+    }
+    // aligned_alloc
+    inline void* aligned_alloc(size_t alignment, size_t size) {
+        return _aligned_malloc(size, alignment);
+    }
+    inline void aligned_free(void* ptr) {
+        _aligned_free(ptr);
     }
 #else
 #error UNKNOWN COMPILER

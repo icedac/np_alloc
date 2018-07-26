@@ -1,0 +1,72 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="src">
+      <UniqueIdentifier>{24e9495b-2027-4762-b681-f2d2517a3bd8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\linux">
+      <UniqueIdentifier>{b5aa285e-116e-4aab-b40f-9d1dd30fb744}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="main.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="np_alloc.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="np_mmap.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="np_thread.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="stdafx.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="config.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="global_pool.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="local_new.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="np_alloc.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="np_bitset.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="np_common.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="np_lf_stack.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="np_mmap.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="np_thread.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="platform.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="stdafx.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="targetver.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="linux\tchar.h">
+      <Filter>src\linux</Filter>
+    </ClInclude>
+    <ClInclude Include="linux\windef.h">
+      <Filter>src\linux</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
