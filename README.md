@@ -10,10 +10,9 @@
 
 
 ## feature
-- per-size, per-thread memory pool wihtout lock
+- lock-free, per-size, per-thread memory pool
 
 ## api
-
 ```
 void*    np_alloc(size_t bytes);
 void*    np_alloc(size_t bytes, const char file[], int line);
