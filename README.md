@@ -18,3 +18,7 @@ void*    np_alloc(size_t bytes);
 void*    np_alloc(size_t bytes, const char file[], int line);
 void     np_free(void * ptr);
 ```
+
+## usage & test code
+
+see [unittest.cpp](https://github.com/icedac/np_alloc/blob/master/test/unittest/UnitTest.cpp)
