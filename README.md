@@ -7,7 +7,7 @@
 - code from scratch, some idea from written commerical code by myself in 2009.
   
 ## toolset
-- c++14/gsl/windows
+- c++14/gsl/x64
 - consideration for linux, not yet buildable
  
 
