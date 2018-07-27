@@ -3,8 +3,9 @@
 
 
 # [WORK-IN-PROGRESS] np_alloc
-- generic per-thread memory alloc/pool for c++
-
+- yet-another, per-thread memory alloc/pool for c++
+- idea from written code by myself in 2010.
+ 
 ## toolset
 - c++14/gsl
 
