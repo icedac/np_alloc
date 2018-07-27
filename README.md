@@ -7,8 +7,9 @@
 - code from scratch, some idea from written commerical code by myself in 2009.
   
 ## toolset
-- c++14/gsl
-
+- c++14/gsl/windows
+- consideration for linux, not yet buildable
+ 
 
 ## feature
 - lock-free, per-size, per-thread memory pool
