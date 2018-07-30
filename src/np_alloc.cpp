@@ -45,31 +45,44 @@ namespace np {
 
 
     global_pool::~global_pool() {
-        std::cout << "[" << std::hex << std::this_thread::get_id() << "] fuck me\n";
+        std::cout << "[" << std::hex << std::this_thread::get_id() << "] ~global_pool() this=[" << std::hex << (uint64)this << "]\n";
     }
 
     // void * _aligned_malloc(size_t size, size_t alignment);
     namespace internal {
+		static std::atomic<np::global_pool*> g_pool = nullptr;
 
-        static void del_glolbal_pool();
+		static void del_glolbal_pool() {
+			auto* ptr = g_pool.load();
+			decltype(ptr) set_it_null = ptr;
+			do {
+				ptr = set_it_null;
+				set_it_null = nullptr;
+			} while (!g_pool.compare_exchange_weak( ptr, set_it_null));
 
-        static np::global_pool* get_global_pool() {
-            static np::global_pool* pool = nullptr;
-            static bool _init = [&]() {
-                pool = new np::global_pool();
+			std::cout << "thread [" << std::hex << std::this_thread::get_id() << "]: global pool destroying. pool=[" << std::hex << (uint64)ptr << "]\n";
+			t_delete(ptr);
+		}
 
-                std::atexit(del_glolbal_pool);
+		static np::global_pool* get_global_pool() {
+			auto* ptr = g_pool.load(std::memory_order_relaxed);
 
-                return true;
-            }();
-            auto init = (_init == true);
-            return pool;
-        }
+			if (!ptr) {
+				auto* new_pool = t_new<np::global_pool>();
 
-        static void del_glolbal_pool() {
-            auto* p = get_global_pool();
-            delete p;
-        }
+				if (g_pool.compare_exchange_strong( ptr, new_pool, std::memory_order_release )) {
+					// we allocated it
+					std::atexit(del_glolbal_pool);
+					ptr = new_pool;
+					std::cout << "thread [" << std::hex << std::this_thread::get_id() << "]: global pool created. pool=[" << std::hex << (uint64)new_pool  << "]\n";
+				}
+				else
+				{	// another pool already allocated so we dispose ours
+					t_delete(new_pool);
+				}
+			}
+			return ptr;
+		}
     }
 
     // tls per-size pool
@@ -124,6 +137,7 @@ namespace np {
             free_ = fh;
 
             // [todo] if has too many free then need to pass it to global pool for reuse
+            // but it will cause cache miss
         }
 
         struct pool {

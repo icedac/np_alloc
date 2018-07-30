@@ -4,13 +4,14 @@
 #include <bitset>
 #include <thread>
 #include <iomanip>
+#include <condition_variable>
 
 #include "gtest/gtest.h"
 #include "../../src/np_common.h"
 #include "../../src/np_bitset.h"
 #include "../../src/np_mmap.h"
 #include "../../src/np_alloc.h"
-
+ 
 //
 //TEST(SquareTests, Square)
 //{
@@ -282,6 +283,27 @@ TEST(np_alloc, mmap) {
     std::cout << mm.debug_as_string();
 }
 
+class event {
+public:
+	event() {
+		handle_ = ::CreateEvent(nullptr, TRUE, FALSE, nullptr);
+	}
+	~event() {
+		::CloseHandle(handle_);
+	}
+
+	void signal_all() {
+		::SetEvent(handle_);
+	}
+
+	void wait() {
+		::WaitForSingleObject(handle_, INFINITE);
+	}
+
+private:
+	HANDLE handle_ = 0;
+};
+
 TEST(np_alloc, np_alloc) {
     using namespace np;
 
@@ -292,7 +314,8 @@ TEST(np_alloc, np_alloc) {
         OP_ALLOC
     };
 
-    const auto kThreadCount = 50;
+	const auto kThreadCreationTestCount = 500;
+	const auto kThreadCount = 50;
     const auto kMaxAllocCount = 1000;
 
 #ifdef _DEBUG
@@ -301,10 +324,32 @@ TEST(np_alloc, np_alloc) {
     const auto kIterationCount = 1000000;
 #endif
 
+	std::cout << "thread [" << std::hex << std::this_thread::get_id() << "]: main thread\n";
+
+
+	// singleton creation thread contention test 
+	std::thread ts_creation[kThreadCreationTestCount];
+	event ev;
+	for (auto& t : ts_creation) {
+		t = std::thread( [&]() {
+			ev.wait();
+			auto* p = np_alloc(100);
+			np_free(p);
+		} );
+	}
+
+	ev.signal_all();
+
+	for (auto& t : ts_creation) {
+		t.join();
+	}
+
+
+
     np_debug_print();
 
-    std::thread ts[kThreadCount];
-    for (auto& t : ts) {
+	std::thread ts[kThreadCount];
+	for (auto& t : ts) {
         t = std::thread([&]() {
             vector< void* > allocated;
 
