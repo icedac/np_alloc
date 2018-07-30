@@ -60,7 +60,7 @@ thread [3a84]: global pool destroying. pool=[2042de1a4b0]
 [3a84] ~global_pool() this=[2042de1a4b0]
 Press any key to continue . . .
 ```
-
+- windows 10 x64 / xeon x5570 2 processor / 8 core 16 thread
 - env|50 threads|500k iteration per thread|1000 max alloction per thread
  
 _ |random alloc(50-7100) | small(50-300) | big(5000-7500)
