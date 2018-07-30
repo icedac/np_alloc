@@ -13,7 +13,7 @@
 
 ## feature
 - lock-free, per-size, per-thread memory pool
-
+ 
 ## api
 ```
 void*    np_alloc(size_t bytes);
@@ -24,6 +24,12 @@ void     np_free(void * ptr);
 ## usage & test code
 
 see [unittest.cpp](https://github.com/icedac/np_alloc/blob/master/test/unittest/UnitTest.cpp)
+ 
+## pros / cons
+- (+) no lock to get new memory so fast
+- (+) improved cache locality due to pre-allocated by memory page for local thread
+- (-) using lots of memory but can be optimizing per project
+ 
 
 ## todo
 ### garbage collecting process from local thread pool to global pool
