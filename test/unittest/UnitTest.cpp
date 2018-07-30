@@ -19,6 +19,14 @@
 //	EXPECT_EQ(-4, square(-2));
 //}
 
+
+/****************************************************************************
+ *
+ * np::bitset<>	
+ *
+ *		fast bitset class with 'popcnt'
+ *
+ */
 TEST(np_alloc, bitset_64) {
     using namespace np;
 
@@ -87,6 +95,13 @@ TEST(np_alloc, bitset_4096) {
 }
 
 
+/****************************************************************************
+ *
+ * np::lf_stack<>
+ *
+ *		simple lock-free stack aware of 'ABA'
+ *
+ */
 struct lfstack_test {
     lfstack_test* next = nullptr;
 };
@@ -183,7 +198,11 @@ TEST(np_alloc, lf_stack) {
 
 }
 
-
+/****************************************************************************
+ * 
+ *	mmap() - platform specific page memory pool
+ *
+ */
 TEST(np_alloc, mmap) {
     using namespace np;
 
@@ -283,6 +302,7 @@ TEST(np_alloc, mmap) {
     std::cout << mm.debug_as_string();
 }
 
+// simple windows event wrapper
 class event {
 public:
 	event() {
@@ -304,6 +324,12 @@ private:
 	HANDLE handle_ = 0;
 };
 
+
+/****************************************************************************
+ * 
+ * np_alloc test
+ *
+ */
 TEST(np_alloc, np_alloc) {
     using namespace np;
 
@@ -404,6 +430,7 @@ TEST(np_alloc, np_alloc) {
 }
 
 
+// checking for some intrinsics
 class InstructionSet
 {
 public:
