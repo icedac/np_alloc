@@ -84,38 +84,39 @@ void check_address_space() {
     }
 }
 
+void __test() {
+	using namespace np;
+
+	SYSTEM_INFO si;
+	::memset(&si, 0, sizeof(si));
+	::GetSystemInfo(&si);
+
+	si.dwPageSize;
+
+	//auto reserve_size = 1024_GB;
+	//// LPVOID hint_address = (LPVOID)0x60000000000;
+	//LPVOID hint_address = (LPVOID)0x10000000000;
+	//0x00000000000; // from
+	//0x7FFFFFFFFFF; // to
+
+	//LPVOID v = VirtualAlloc(hint_address, reserve_size, MEM_RESERVE, PAGE_READWRITE);
+	//auto lerr = ::GetLastError();
+	//auto lerr_str = GetLastErrorAsString();
+	//LPVOID v_end = (LPVOID)(((byte*)v) + reserve_size);
+
+
+	check_address_space();
+	check_address_space();
+
+	void* p = np_alloc(100);
+	np_free(p);
+}
+
 int main()
 {
+	// __test();
+
     void general_test();
     general_test();
-
-    using namespace np;
-
-    SYSTEM_INFO si;
-    ::memset(&si, 0, sizeof(si));
-    ::GetSystemInfo(&si);
-
-    si.dwPageSize;
-
-    //auto reserve_size = 1024_GB;
-    //// LPVOID hint_address = (LPVOID)0x60000000000;
-    //LPVOID hint_address = (LPVOID)0x10000000000;
-    //0x00000000000; // from
-    //0x7FFFFFFFFFF; // to
-
-    //LPVOID v = VirtualAlloc(hint_address, reserve_size, MEM_RESERVE, PAGE_READWRITE);
-    //auto lerr = ::GetLastError();
-    //auto lerr_str = GetLastErrorAsString();
-    //LPVOID v_end = (LPVOID)(((byte*)v) + reserve_size);
-    
-
-    check_address_space();
-    check_address_space();
-
-    void* p = np_alloc(100);
-    np_free(p);
-
-    void mutex_test();
-    mutex_test();
 }
 
