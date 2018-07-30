@@ -22,8 +22,8 @@ void     np_free(void * ptr);
 ```
 
 ## usage & test code
-
-see [unittest.cpp](https://github.com/icedac/np_alloc/blob/master/test/unittest/UnitTest.cpp)
+- see [unittest.cpp](./test/unittest/UnitTest.cpp)
+- see core [source](./src/)
  
 ## pros / cons
 - (+) no lock to get new memory so fast
