@@ -26,8 +26,8 @@ void     np_free(void * ptr);
 see [unittest.cpp](https://github.com/icedac/np_alloc/blob/master/test/unittest/UnitTest.cpp)
 
 ## todo
-- garbage collecting process from local thread pool to global pool
--- it will saves memory but worse cache localtity due to spreading out memory fragments across threads
+### garbage collecting process from local thread pool to global pool
+- it will saves memory but worse cache localtity due to spreading out memory fragments across threads
 
 ## benchmark
 
