@@ -13,7 +13,8 @@
 
 ## feature
 - lock-free, per-size, per-thread memory pool
- 
+- wait-free most of times except fetching from global pool
+  
 ## api
 ```
 void*    np_alloc(size_t bytes);
