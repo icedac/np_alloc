@@ -38,7 +38,7 @@ void     np_free(void * ptr);
 
 ## benchmark
 - just for initial lame benchmarks. code are [here](https://github.com/icedac/np_alloc/blob/master/np_alloc_test/test.cpp)
-- methods: allocate up to max allocate count and deallocate until all freed and repeat this up to iteration count
+- methods: allocate up to max allocate count and deallocate until all freed and repeat this
 
 ```
 thread [28b0]: global pool created. pool=[2042de1a4b0]
