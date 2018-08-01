@@ -37,7 +37,8 @@ void     np_free(void * ptr);
 - it will saves memory but worse cache localtity due to spreading out memory fragments across threads
 
 ## benchmark
-- just for initial benchmarks
+- just for initial lame benchmarks. code are [here](https://github.com/icedac/np_alloc/blob/master/np_alloc_test/test.cpp)
+- methods: allocate up to max allocate count and deallocate until all freed and repeat this up to iteration count
 
 ```
 thread [28b0]: global pool created. pool=[2042de1a4b0]
@@ -62,7 +63,7 @@ thread [3a84]: global pool destroying. pool=[2042de1a4b0]
 Press any key to continue . . .
 ```
 - windows 10 x64 / xeon x5570 2 processor / 8 core 16 thread
-- env|50 threads|500k iteration per thread|1000 max alloction per thread
+- env|50 threads|500k iteration per thread|10000 max alloction per thread
  
 _ |random alloc(50-7100) | small(50-300) | big(5000-7500)
 ---|---|---|---
@@ -70,7 +71,7 @@ malloc|5.1139 s|0.7339 s|3.0850 s
 np_alloc|1.2951 s|0.6819 s|0.8270 s
 faster x|3.95 |1.08|3.73
 
-- env|1 thread|5000k iteration per thread|1000 max alloction per thread
+- env|1 thread|5000k iteration per thread|10000 max alloction per thread
 
 _ | random alloc(50-7100) | small(50-300) | big(5000-7500)
 ---|---|---|---
