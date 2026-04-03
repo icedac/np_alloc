@@ -8,7 +8,7 @@
   
 ## toolset
 - c++14/gsl/x64
-- consideration for linux, not yet buildable
+- POSIX (Linux/macOS) support via `linux_build/`
  
 
 ## feature
@@ -79,4 +79,24 @@ malloc | 1.4316 s| 0.2810 s| 1.7625 s
 np_alloc | 0.2296 s | 0.0977 s| 0.2321 s
 faster x|6.24|2.88|7.59
 
+### macOS/ARM64 (Apple Silicon M-series, 2026)
+
+After bugfixes and POSIX port. Benchmark code: [`linux_build/bench_v2.cpp`](https://github.com/icedac/np_alloc/blob/fix/codex-review-bugfixes/linux_build/bench_v2.cpp)
+
+- clang++ -std=c++17 -O2 / macOS 15 / Apple Silicon (ARM64)
+- 4 threads / 500k iterations per thread / 10000 max allocation per thread
+
+| test | malloc | np_alloc | speedup |
+|------|--------|----------|---------|
+| random_single (100-7100B) | 0.015s | 0.004s | **3.6x** |
+| random_multi (100-7100B) | 0.005s | 0.001s | **3.7x** |
+| small_single (50-300B) | 0.009s | 0.003s | **2.7x** |
+| small_multi (50-300B) | 0.004s | 0.001s | **8.4x** |
+| big_single (5000-7500B) | 0.012s | 0.006s | **2.1x** |
+| big_multi (5000-7500B) | 0.006s | 0.001s | **4.6x** |
+
+Key observations:
+- Single-thread: **2.1~3.6x** faster — TLS per-size pool + free list O(1) alloc beats malloc's general-purpose path
+- Multi-thread: **3.7~8.4x** faster — zero lock contention scales linearly with thread count
+- small_multi **8.4x** shows the sweet spot where lock-free per-thread pools dominate
 
