@@ -52,27 +52,24 @@ namespace np {
     namespace internal {
 		static std::atomic<np::global_pool*> g_pool = nullptr;
 
-		static void del_glolbal_pool() {
-			auto* ptr = g_pool.load();
-			decltype(ptr) set_it_null = ptr;
-			do {
-				ptr = set_it_null;
-				set_it_null = nullptr;
-			} while (!g_pool.compare_exchange_weak( ptr, set_it_null));
+		static void del_global_pool() {
+			auto* ptr = g_pool.exchange(nullptr, std::memory_order_acq_rel);
 
-			std::cout << "thread [" << std::hex << std::this_thread::get_id() << "]: global pool destroying. pool=[" << std::hex << (uint64)ptr << "]\n";
-			t_delete(ptr);
+			if (ptr) {
+				std::cout << "thread [" << std::hex << std::this_thread::get_id() << "]: global pool destroying. pool=[" << std::hex << (uint64)ptr << "]\n";
+				t_delete(ptr);
+			}
 		}
 
 		static np::global_pool* get_global_pool() {
-			auto* ptr = g_pool.load(std::memory_order_relaxed);
+			auto* ptr = g_pool.load(std::memory_order_acquire);
 
 			if (!ptr) {
 				auto* new_pool = t_new<np::global_pool>();
 
-				if (g_pool.compare_exchange_strong( ptr, new_pool, std::memory_order_release )) {
+				if (g_pool.compare_exchange_strong( ptr, new_pool, std::memory_order_acq_rel )) {
 					// we allocated it
-					std::atexit(del_glolbal_pool);
+					std::atexit(del_global_pool);
 					ptr = new_pool;
 					std::cout << "thread [" << std::hex << std::this_thread::get_id() << "]: global pool created. pool=[" << std::hex << (uint64)new_pool  << "]\n";
 				}
@@ -202,19 +199,20 @@ namespace np {
         const size_t    alloc_size_;
         size_t          chunk_size_;
 
-        uint64          allocated_;
+        uint64          allocated_ = 0;
     };
 
     // alloc header
     struct alloc_header_t
     {
-        std::uint32_t   size;
+        std::uint64_t   size;       // was uint32_t; extended to support >4GiB allocations
         std::uint16_t   line;
         std::uint16_t   thread_id;
-        const char*	    file;
+        std::uint8_t    padding_[4]; // maintain alignment
+        const char*     file;
     };
     constexpr size_t calc_aligned_size(size_t actual_size, size_t aligned_size) {
-        return ((actual_size / aligned_size) + (actual_size%aligned_size) == 0 ? 0 : 1) * aligned_size;
+        return ((actual_size + aligned_size - 1) / aligned_size) * aligned_size;
     }
 
     static const uint64 kMemoryFencePadding[] = {
@@ -260,10 +258,14 @@ namespace np {
             }
 
             alloc_header_t* h = reinterpret_cast<alloc_header_t*>(p);
-            h->size = (std::uint32_t)bytes;
+            h->size = bytes;
             h->line = (std::uint16_t)line;
             h->file = file;
-            h->thread_id = (uint16_t) *((uint32*)(&std::this_thread::get_id())); // std::thread::id implemented as uint32
+            {
+                // portable thread id extraction via hash
+                auto tid = std::hash<std::thread::id>{}(std::this_thread::get_id());
+                h->thread_id = (uint16_t)(tid & 0xFFFF);
+            }
 
             p = reinterpret_cast<void*>(((byte*)p) + header_size);
 #ifdef NP_DEBUG_MEMORY_FENCE
@@ -394,6 +396,7 @@ NP_API void* np_alloc(size_t bytes, const char file[], int line)
 
 NP_API void np_free(void * ptr)
 {
+    if (!ptr) return;
     np::thread_local_pool::get().dealloc(ptr);
 }
 
