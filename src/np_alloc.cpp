@@ -180,6 +180,13 @@ namespace np {
         }
 
         void deinit() {
+            // On process shutdown, atexit(del_global_pool) may have already
+            // destroyed the global pool and released all virtual memory.
+            // Both free_ and head_ point into that address space, so any
+            // pointer dereference would access-violate. Bail out early;
+            // the OS reclaims everything on process exit.
+            if (!internal::is_pool_alive()) return;
+
             auto c = 0;
             free_header* f = free_;
             while (f) {
@@ -191,13 +198,6 @@ namespace np {
                 std::lock_guard<std::mutex> lg(g_mtx_cout);
                 std::cerr << "tls_ps_pool["<< alloc_size_ << "]::thread [" << std::hex << std::this_thread::get_id() << "] has allocated and not freed: " << allocated_ << " units. free_count: " << c << " units\n";
             }
-
-            // On process shutdown, atexit(del_global_pool) may have already
-            // destroyed the global pool and released all virtual memory.
-            // FLS/pthread_key callbacks fire after atexit on Windows, so
-            // head_ may point into freed address space. Skip the free to
-            // avoid access violations; the OS reclaims everything on exit.
-            if (!internal::is_pool_alive()) return;
 
             while (head_) {
                 pool* p = head_;

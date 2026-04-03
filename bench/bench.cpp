@@ -103,6 +103,9 @@ double run_multi(int nthreads, int iterations, int max_alloc, int min_sz, int ma
 // ── Main ────────────────────────────────────────────────────────────────
 
 int main() {
+    // Line-buffer stdout so benchmark output survives unexpected termination
+    setvbuf(stdout, nullptr, _IOLBF, 0);
+
     printf("=== np_alloc Benchmark ===\n");
 
     // Warm up: ensure global pool is initialized
