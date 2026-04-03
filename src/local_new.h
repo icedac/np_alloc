@@ -21,6 +21,8 @@
 #include <new>
 #endif
 
+#include "np_common.h"
+
 namespace np {
 
     namespace internal {

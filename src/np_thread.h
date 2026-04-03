@@ -4,7 +4,7 @@
  *  np_thread.h
  *      ($\np_alloc\src)
  *
- *  by icedac 
+ *  by icedac
  *
  ***/
 #ifndef _____NP_ALLOC__NP_THREAD_H_
@@ -16,9 +16,11 @@
 namespace np {
 
     /****************************************************************************
-     * 	thread_atexit() - implemented with FlsAlloc()
+     *  thread_atexit() — register per-thread cleanup callbacks
      *
-     *      FlsAlloc() https://msdn.microsoft.com/ko-kr/dc348ef3-37e5-40f2-bd5c-5f8aebc7cc59
+     *  Windows: implemented via FlsAlloc() (Fiber Local Storage)
+     *    https://learn.microsoft.com/en-us/windows/win32/api/fibersapi/nf-fibersapi-flsalloc
+     *  POSIX:   implemented via pthread_key_create() destructor
      */
     typedef std::function< void(void) > fn_atexit_callback;
     NP_API void thread_atexit(fn_atexit_callback);
@@ -27,4 +29,3 @@ namespace np {
 }
 
 #endif// _____NP_ALLOC__NP_THREAD_H_
-
