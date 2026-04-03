@@ -98,8 +98,11 @@ namespace np {
     {
         void* hint_address = (void*)0x10000000000;
 
-        for (auto i = 0; i < 0xf; ++i) {
-            void* address = (void*)(((uint64)hint_address)*(i + 1));
+        // Try with hint addresses first, then fall back to OS-chosen address
+        for (auto i = 0; i <= 0xf; ++i) {
+            void* address = (i < 0xf)
+                ? (void*)(((uint64)hint_address) * (i + 1))
+                : nullptr; // last attempt: let OS choose
             void* v = internal::virtual_reserve(address, size);
             if (v) {
 
