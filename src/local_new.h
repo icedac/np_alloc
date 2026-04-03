@@ -14,7 +14,12 @@
 #ifndef _____NP_ALLOC__LOCAL_NEW_H_
 #define _____NP_ALLOC__LOCAL_NEW_H_
 
+#ifdef _MSC_VER
 #include <malloc.h>
+#else
+#include <stdlib.h>
+#include <new>
+#endif
 
 namespace np {
 

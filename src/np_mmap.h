@@ -21,7 +21,9 @@ namespace np {
 
     constexpr static const uint64 kDefaultChunkSize = 1_MB;
     constexpr static const uint64 kDefaultChunkCount = 64 * 64; // 4096
-    constexpr static const uint64 kDefaultWholeChunkSize = 256_GB;
+    // 256_GB is too large for some platforms (macOS vm limit).
+    // Use chunk_count * chunk_size = 4096 * 1MB = 4GB as safe default.
+    constexpr static const uint64 kDefaultWholeChunkSize = kDefaultChunkSize * kDefaultChunkCount;
 
     class mmap {
     public:
@@ -120,17 +122,17 @@ namespace np {
         string debug_as_string() /*const*/;
 
     private:
-        std::atomic<void*>              ptr_ = nullptr;
+        std::atomic<void*>              ptr_{nullptr};
         np::bitset<kDefaultChunkCount>  alloc_chunk_index_;
 
-        std::atomic<void*>              head_ = nullptr; // allocated from here
+        std::atomic<void*>              head_{nullptr}; // allocated from here
 
         // lock-free stack
         lf_stack<chunk_header>          free_head_;
 
-        std::atomic<uint64>             perf_alloc = 0;
-        std::atomic<uint64>             perf_dealloc = 0;
-        std::atomic<uint64>             perf_alloc_from_free = 0;
+        std::atomic<uint64>             perf_alloc{0};
+        std::atomic<uint64>             perf_dealloc{0};
+        std::atomic<uint64>             perf_alloc_from_free{0};
 
         uint64              size_ = 0;
         uint64              base_page_size_ = 0;

@@ -20,11 +20,11 @@ namespace np {
 
     template < typename T >
     const T* get_next( const T* t) {
-        return typename t->next;
+        return t->next;
     }
     template < typename T >
-    void set_next(T* t, T* next) {
-        typename t->next = next;
+    void set_next(T* t, T* next_ptr) {
+        t->next = next_ptr;
     }
 
     template < typename T >

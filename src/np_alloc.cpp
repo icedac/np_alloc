@@ -50,7 +50,7 @@ namespace np {
 
     // void * _aligned_malloc(size_t size, size_t alignment);
     namespace internal {
-		static std::atomic<np::global_pool*> g_pool = nullptr;
+		static std::atomic<np::global_pool*> g_pool{nullptr};
 
 		static void del_global_pool() {
 			auto* ptr = g_pool.exchange(nullptr, std::memory_order_acq_rel);
@@ -231,7 +231,7 @@ namespace np {
                 auto* pool = internal::t_new<thread_local_pool>();
 
                 np::thread_atexit([pool]() {
-                    internal::t_delete(s_pool);
+                    internal::t_delete(pool);
                 });
 
                 s_pool = pool;

@@ -62,8 +62,10 @@ namespace np {
         }
 
         static void* virtual_alloc(void* address, uint64 chunk_size) {
-            // Commit pages within a previously reserved region.
-            // mmap with MAP_FIXED over existing reservation to commit pages.
+            // Commit pages: mprotect is safer than MAP_FIXED (avoids vm entry splits)
+            int ret = ::mprotect(address, chunk_size, PROT_READ | PROT_WRITE);
+            if (ret == 0) return address;
+            // Fallback to MAP_FIXED
             void* ptr = ::mmap(address, chunk_size, PROT_READ | PROT_WRITE,
                 MAP_FIXED | MAP_PRIVATE | MAP_ANON, -1, 0);
             if (ptr == MAP_FAILED) return nullptr;
@@ -151,9 +153,7 @@ namespace np {
         }
 
         auto index = get_chunk_index(head);
-        // alloc_chunk_index_.set(index); // allocated
         perf_alloc.fetch_add(1);
-        // printf("mmap::allocate ptr[%I64x] index[%I64d] size[%I64d]\n", (uint64)head, index, get_chunk_size());
 
         return head;
     }
