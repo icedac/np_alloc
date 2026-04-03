@@ -20,11 +20,11 @@ namespace np {
 
     template < typename T >
     const T* get_next( const T* t) {
-        return typename t->next;
+        return t->next;
     }
     template < typename T >
-    void set_next(T* t, T* next) {
-        typename t->next = next;
+    void set_next(T* t, T* next_ptr) {
+        t->next = next_ptr;
     }
 
     template < typename T >
@@ -45,14 +45,14 @@ namespace np {
         };
 
         T* pop() {
-            head_t next, curr = head_.load(std::memory_order_relaxed);
+            head_t next, curr = head_.load(std::memory_order_acquire);
 
             do {
                 if (!curr.ptr) break;
                 next.aba = curr.aba + 1;
                 next.ptr = curr.ptr->next;
 
-            } while (!head_.compare_exchange_weak( curr, next, std::memory_order_release));
+            } while (!head_.compare_exchange_weak( curr, next, std::memory_order_acq_rel));
 
             return curr.ptr;
         }
@@ -66,14 +66,14 @@ namespace np {
         }
 
         void for_each(std::function< void(const T*) > fun) {
-            head_t next, curr = head_.load(std::memory_order_relaxed);
+            head_t next, curr = head_.load(std::memory_order_acquire);
 
             do {
                 if (!curr.ptr) break;
                 next.aba = curr.aba + 1;
                 next.ptr = nullptr;
 
-            } while (!head_.compare_exchange_weak(curr, next, std::memory_order_release));
+            } while (!head_.compare_exchange_weak(curr, next, std::memory_order_acq_rel));
 
             // now we acquired full stack
             T* ptr = curr.ptr;

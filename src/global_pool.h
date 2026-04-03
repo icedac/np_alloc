@@ -18,7 +18,12 @@ namespace np {
     class global_pool {
     public:
         inline global_pool() {
-            mm_.reserve();
+            // Try default size first, fall back to smaller reservations
+            if (!mm_.reserve()) {
+                for (uint64 size = kDefaultWholeChunkSize / 2; size >= 64_MB; size /= 2) {
+                    if (mm_.reserve(size)) break;
+                }
+            }
         }
 
         ~global_pool();

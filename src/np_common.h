@@ -12,6 +12,7 @@
 
 #include <assert.h>
 #include <stdint.h>
+#include <cstdint>
 #include <stdlib.h>
 
 #include <vector>
@@ -67,7 +68,9 @@ namespace np {
     inline uint32 popcnt(uint64 x) { return __builtin_popcountll(x); }
 
     inline void* aligned_alloc(size_t alignment, size_t size) {
-        return std::aligned_alloc(alignment, size);
+        void* ptr = nullptr;
+        if (posix_memalign(&ptr, alignment, size) != 0) return nullptr;
+        return ptr;
     }
     inline void aligned_free(void* ptr) {
         free(ptr);

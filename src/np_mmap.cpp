@@ -43,31 +43,40 @@ namespace np {
         }
 #else
         static void* virtual_reserve(void* hint_address, uint64 size) {
-            // return (void*)VirtualAlloc((LPVOID)hint_address, size, MEM_RESERVE, PAGE_READWRITE);
-            return nullptr;
+            // Reserve virtual address space without committing physical memory.
+            // MAP_NORESERVE: do not reserve swap space (like Windows MEM_RESERVE).
+            void* ptr = ::mmap(hint_address, size, PROT_NONE,
+                MAP_PRIVATE | MAP_ANON | MAP_NORESERVE, -1, 0);
+            if (ptr == MAP_FAILED) return nullptr;
+            // If hint was given but kernel chose a different address, accept it.
+            return ptr;
         }
 
         static bool virtual_release(void* ptr) {
-            // return TRUE == VirtualFree((LPVOID)ptr, 0, MEM_RELEASE);
+            if (!ptr) return true;
+            // Size is not tracked here; caller must ensure correctness.
+            // For full release we'd need size, but matching Windows semantics
+            // where VirtualFree(MEM_RELEASE) releases the whole reservation.
+            // This is a known limitation — see mmap::~mmap() which calls this.
             return true;
         }
 
         static void* virtual_alloc(void* address, uint64 chunk_size) {
-            // return (void*)VirtualAlloc( (LPVOID)address, chunk_size, MEM_COMMIT, PAGE_READWRITE);
-
-# if defined(macintosh) || defined(__APPLE__) || defined(__APPLE_CC__)
-            void* ptr = ::mmap(address, chunk_size, PROT_READ | PROT_WRITE, MAP_FIXED | MAP_PRIVATE | MAP_ANON, -1, 0);
-# else
-            const int fd(::open("/dev/zero", O_RDONLY));
-            assert(-1 != fd);
-            void* ptr = ::mmap(address, chunk_size, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
-# endif
+            // Commit pages: mprotect is safer than MAP_FIXED (avoids vm entry splits)
+            int ret = ::mprotect(address, chunk_size, PROT_READ | PROT_WRITE);
+            if (ret == 0) return address;
+            // Fallback to MAP_FIXED
+            void* ptr = ::mmap(address, chunk_size, PROT_READ | PROT_WRITE,
+                MAP_FIXED | MAP_PRIVATE | MAP_ANON, -1, 0);
+            if (ptr == MAP_FAILED) return nullptr;
             return ptr;
         }
 
         static bool virtual_free(void* address, uint64 chunk_size) {
-            // return TRUE == VirtualFree((LPVOID)address, chunk_size, MEM_DECOMMIT);
-            ::munmap( address, chunk_size );
+            // Decommit pages (return physical memory to OS, keep reservation).
+            // madvise DONTNEED releases physical pages but keeps the mapping.
+            int ret = ::madvise(address, chunk_size, MADV_DONTNEED);
+            return (ret == 0);
         }
 #endif
     }
@@ -89,8 +98,11 @@ namespace np {
     {
         void* hint_address = (void*)0x10000000000;
 
-        for (auto i = 0; i < 0xf; ++i) {
-            void* address = (void*)(((uint64)hint_address)*(i + 1));
+        // Try with hint addresses first, then fall back to OS-chosen address
+        for (auto i = 0; i <= 0xf; ++i) {
+            void* address = (i < 0xf)
+                ? (void*)(((uint64)hint_address) * (i + 1))
+                : nullptr; // last attempt: let OS choose
             void* v = internal::virtual_reserve(address, size);
             if (v) {
 
@@ -113,25 +125,30 @@ namespace np {
     mmap::~mmap()
     {
         void* v = ptr_.load();
-
-        if (!internal::virtual_release(v)) {
-            //auto lerr_str = GetLastErrorAsString();
-            //printf("addr[%I64x]; VirtualFree failed - %s", (uint64)address, lerr_str.c_str());
+        if (v) {
+#ifdef _MSC_VER
+            internal::virtual_release(v);
+#else
+            // On POSIX, munmap requires the size of the mapping.
+            if (size_ > 0) {
+                ::munmap(v, size_);
+            }
+#endif
         }
     }
 
     void* mmap::alloc_chunk_from_new()
     {
-        void* head = head_.load(std::memory_order_relaxed);
+        void* head = head_.load(std::memory_order_acquire);
         void* next_ptr = nullptr;
 
         do {
             if (!head) return nullptr;
             auto index = get_chunk_index(head);
-            assert(index != -1);
+            assert(index != (uint64)-1);
             next_ptr = get_chunk_ptr(index + 1);
 
-        } while (!head_.compare_exchange_weak(head, next_ptr, std::memory_order_release));
+        } while (!head_.compare_exchange_weak(head, next_ptr, std::memory_order_acq_rel));
 
         head = internal::virtual_alloc( head, chunk_size_);
         if (!head) {
@@ -139,9 +156,7 @@ namespace np {
         }
 
         auto index = get_chunk_index(head);
-        // alloc_chunk_index_.set(index); // allocated
         perf_alloc.fetch_add(1);
-        // printf("mmap::allocate ptr[%I64x] index[%I64d] size[%I64d]\n", (uint64)head, index, get_chunk_size());
 
         return head;
     }
