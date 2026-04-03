@@ -61,6 +61,13 @@ namespace np {
 			}
 		}
 
+		// Check if the global pool is still alive (not yet destroyed by atexit).
+		// Used by thread-local pool deinit to avoid accessing freed virtual memory
+		// during process shutdown when FLS/pthread callbacks fire after atexit.
+		static bool is_pool_alive() {
+			return g_pool.load(std::memory_order_acquire) != nullptr;
+		}
+
 		static np::global_pool* get_global_pool() {
 			auto* ptr = g_pool.load(std::memory_order_acquire);
 
@@ -184,6 +191,13 @@ namespace np {
                 std::lock_guard<std::mutex> lg(g_mtx_cout);
                 std::cerr << "tls_ps_pool["<< alloc_size_ << "]::thread [" << std::hex << std::this_thread::get_id() << "] has allocated and not freed: " << allocated_ << " units. free_count: " << c << " units\n";
             }
+
+            // On process shutdown, atexit(del_global_pool) may have already
+            // destroyed the global pool and released all virtual memory.
+            // FLS/pthread_key callbacks fire after atexit on Windows, so
+            // head_ may point into freed address space. Skip the free to
+            // avoid access violations; the OS reclaims everything on exit.
+            if (!internal::is_pool_alive()) return;
 
             while (head_) {
                 pool* p = head_;
