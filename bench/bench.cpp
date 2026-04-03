@@ -121,11 +121,17 @@ int main() {
 #endif
 
     printf("=== np_alloc Benchmark ===\n");
+    fflush(stdout);
 
     // Warm up: ensure global pool is initialized
     void* w = np_alloc(64);
+    if (!w) {
+        fprintf(stderr, "FATAL: np_alloc(64) returned null — global pool init failed\n");
+        return 1;
+    }
     np_free(w);
     printf("Warmup done.\n");
+    fflush(stdout);
 
     const int S_ITER    = 500000;
     const int M_THREADS = 4;

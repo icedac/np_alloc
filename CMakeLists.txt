@@ -13,12 +13,18 @@ add_library(np_alloc STATIC
 
 target_include_directories(np_alloc PUBLIC src)
 
-# Force-include stdafx.h (precompiled header emulation)
 if(MSVC)
     target_compile_options(np_alloc PRIVATE /FI"stdafx.h")
 else()
+    # Force-include stdafx.h (precompiled header emulation)
     target_compile_options(np_alloc PRIVATE -include stdafx.h)
     target_link_libraries(np_alloc PUBLIC pthread)
+
+    # GCC on x86_64: 16-byte atomic CAS (cmpxchg16b) needs -mcx16 and -latomic
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+        target_compile_options(np_alloc PUBLIC -mcx16)
+        target_link_libraries(np_alloc PUBLIC atomic)
+    endif()
 endif()
 
 # ── Benchmark ────────────────────────────────────────────────────────────
