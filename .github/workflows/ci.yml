@@ -33,4 +33,5 @@ jobs:
         run: cmake --build build --config Release
 
       - name: Run benchmark
+        shell: cmd
         run: .\build\Release\np_bench.exe

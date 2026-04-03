@@ -103,8 +103,9 @@ double run_multi(int nthreads, int iterations, int max_alloc, int min_sz, int ma
 // ── Main ────────────────────────────────────────────────────────────────
 
 int main() {
-    // Line-buffer stdout so benchmark output survives unexpected termination
-    setvbuf(stdout, nullptr, _IOLBF, 0);
+    // Disable stdout buffering so output survives crashes
+    setvbuf(stdout, nullptr, _IONBF, 0);
+    fprintf(stderr, "[bench] main() entered\n");
 
     printf("=== np_alloc Benchmark ===\n");
 
@@ -115,6 +116,7 @@ int main() {
         return 1;
     }
     np_free(w);
+    fprintf(stderr, "[bench] warmup OK\n");
 
     const int S_ITER    = 500000;
     const int M_THREADS = 4;
@@ -155,5 +157,6 @@ int main() {
 
     printf("\n");
     np_debug_print();
+    fprintf(stderr, "[bench] main() returning 0\n");
     return 0;
 }
